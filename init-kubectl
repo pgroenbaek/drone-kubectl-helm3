@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+set -e
+
+if [ -z ${PLUGIN_KUBERNETES_NAMESPACE} ]; then
+  PLUGIN_KUBERNETES_NAMESPACE="default"
+fi
+
+if [ -z ${PLUGIN_KUBERNETES_USER} ]; then
+  PLUGIN_KUBERNETES_USER="default"
+fi
+
+kubectl config set-credentials ${PLUGIN_KUBERNETES_USER} --token=${PLUGIN_KUBERNETES_TOKEN}
+
+if [ ! -z ${PLUGIN_KUBERNETES_CERT} ]; then
+  echo ${PLUGIN_KUBERNETES_CERT} | base64 -d > ca.crt
+  kubectl config set-cluster default --server=${PLUGIN_KUBERNETES_SERVER} --certificate-authority=ca.crt
+else
+  echo "WARNING: Using insecure connection to cluster"
+  kubectl config set-cluster default --server=${PLUGIN_KUBERNETES_SERVER} --insecure-skip-tls-verify=true
+fi
+
+kubectl config set-context default --cluster=default --user=${PLUGIN_KUBERNETES_USER} --namespace=${PLUGIN_KUBERNETES_NAMESPACE}
+kubectl config use-context default
