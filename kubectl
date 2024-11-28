@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -e
+
+PATH="/opt/bitnami/kubectl/bin:$PATH"
+PATH="/opt/helm/bin:$PATH"
+
+INIT_FILE=/opt/drone-kubectl-helm3-init/initialized
+
+if [ ! -f ${INIT_FILE} ]; then
+    init-kubectl
+    touch ${INIT_FILE}
+fi
+
+kubectl $@
