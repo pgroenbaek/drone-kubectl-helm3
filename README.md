@@ -29,13 +29,13 @@ steps:
 
 ```
 
-You need to create three secrets for the pipeline with the kubernetes credentials named `k8s_server`, `k8s_cert` and `k8s_token`.
+You need to create three secrets for the pipeline named `k8s_server`, `k8s_cert` and `k8s_token`. These contain the kubernetes cluster credentials.
 
-If you don't know how to get these read the next section.
+If you don't know how to get the credentials from the cluster, read the next section.
 
 
 ### How to get the kubernetes cluster credentials
-You need to have a service account with proper privileges and a service account token so that your Drone CI pipeline can authenticate with the kubernetes cluster.
+You need to have a service account with proper privileges and a service account token so that your Drone CI pipeline can perform work on the kubernetes cluster.
 
 Create one using the following command:
 ```bash
