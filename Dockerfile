@@ -1,6 +1,6 @@
 FROM bitnami/kubectl:1.31
 
-LABEL maintainer "Peter Grønbæk Andersen <peter@grnbk.io>"
+LABEL maintainer="Peter Grønbæk Andersen <peter@grnbk.io>"
 
 USER root
 
@@ -21,7 +21,7 @@ RUN chmod +x /opt/drone-kubectl-helm3-init/bin/helm
 RUN chmod +x /opt/drone-kubectl-helm3-init/bin/kubectl
 RUN chmod +x /opt/drone-kubectl-helm3-init/bin/init-kubectl
 
-ENV PATH="/opt/drone-kubectl-helm3/bin:$PATH"
+ENV PATH="/opt/drone-kubectl-helm3-init/bin:$PATH"
 
 ENTRYPOINT ["/bin/bash"]
 

@@ -5,15 +5,23 @@ This [Drone CI](https://drone.io/) plugin allows you to use `kubectl` and `helm`
 ## Usage
 
 ### Kubernetes 1.24 or newer
-You first need to create a service account in the kubernetes cluster. This service account allows the pipeline to perform work on the cluster.
+First create a service account in the kubernetes cluster. This service account allows the pipeline to perform work on the cluster.
 ```bash
 kubectl create serviceaccount <SERVICE_ACCOUNT_NAME>
 kubectl create clusterrolebinding <SERVICE_ACCOUNT_NAME> --clusterrole=cluster-admin --serviceaccount=default:<SERVICE_ACCOUNT_NAME>
+kubectl create token <SERVICE_ACCOUNT_NAME> -n default --duration=8760h
 ```
+
+*NOTE:* The token created with the above command will last for one year, change `8760h` if needed.
 
 You can find your server url by using this command:
 ```bash
 kubectl config view -o jsonpath='{range .clusters[*]}{.name}{"\t"}{.cluster.server}{"\n"}{end}'
+```
+
+You can find the certificate by using this command:
+```bash
+kubectl get configmap -n kube-system kube-root-ca.crt -o jsonpath='{.data.ca\.crt}' | base64 -w 0
 ```
 
 The following example shows how to configure a pipeline step to use the plugin from Docker Hub for Kubernetes 1.24 or newer:
@@ -28,19 +36,22 @@ steps:
     settings:
       kubernetes_user: <SERVICE_ACCOUNT_NAME>
       kubernetes_server: <SERVER_URL>
+      kubernetes_cert:
+        from_secret: k8s_cert
+      kubernetes_token:
+        from_secret: k8s_token
     commands:
-      - kubectl --version
-      - helm --version
+      - kubectl version
+      - helm version
 ```
 
+Define `k8s_cert` and `k8s_token` as pipeline secrets with the cert and token values you just created.
+
 ### Kubernetes 1.23 or older
-
-You need to create two secrets for the pipeline named `k8s_cert` and `k8s_token`. These contain the kubernetes cluster credentials.
-
-First create a service account using the following command:
+First create a service account in the kubernetes cluster. This service account allows the pipeline to perform work on the cluster.
 ```bash
-kubectl create serviceaccount <NAME>
-kubectl create clusterrolebinding <NAME> --clusterrole=cluster-admin --serviceaccount=default:<NAME>
+kubectl create serviceaccount <SERVICE_ACCOUNT_NAME>
+kubectl create clusterrolebinding <SERVICE_ACCOUNT_NAME> --clusterrole=cluster-admin --serviceaccount=default:<SERVICE_ACCOUNT_NAME>
 ```
 
 After creating a service account, you can find your server url by using the command:
@@ -48,7 +59,7 @@ After creating a service account, you can find your server url by using the comm
 kubectl config view -o jsonpath='{range .clusters[*]}{.name}{"\t"}{.cluster.server}{"\n"}{end}'
 ```
 
-If the service account name is `deploy`, you would have a secret named `deploy-token-xxxx` (xxxx is some random characters).
+If the service account name is `deploy`, you would now have a secret named `deploy-token-xxxx` (xxxx is some random characters).
 
 You can get your token and certificate by using the following commands:
 
@@ -79,10 +90,12 @@ steps:
       kubernetes_token:
         from_secret: k8s_token
     commands:
-      - kubectl --version
-      - helm --version
+      - kubectl version
+      - helm version
 
 ```
+
+Define `k8s_cert` and `k8s_token` as pipeline secrets with the cert and token values you just created.
 
 ### Using a private container registry
 
@@ -110,8 +123,8 @@ steps:
       kubernetes_user: <SERVICE_ACCOUNT_NAME>
       kubernetes_server: <SERVER_URL>
     commands:
-      - kubectl --version
-      - helm --version
+      - kubectl version
+      - helm version
 
 image_pull_secrets:
 - docker_config_json

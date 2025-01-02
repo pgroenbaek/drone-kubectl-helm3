@@ -2,57 +2,23 @@
 
 set -e
 
-# Default namespace if not provided
-if [ -z "${PLUGIN_KUBERNETES_NAMESPACE}" ]; then
+if [ -z ${PLUGIN_KUBERNETES_NAMESPACE} ]; then
   PLUGIN_KUBERNETES_NAMESPACE="default"
 fi
 
-# Default Kubernetes user if not provided
-if [ -z "${PLUGIN_KUBERNETES_USER}" ]; then
+if [ -z ${PLUGIN_KUBERNETES_USER} ]; then
   PLUGIN_KUBERNETES_USER="default"
 fi
 
-# Get the Kubernetes server version
-K8S_VERSION=$(kubectl version --short | grep "Server Version" | awk -F': ' '{print $2}')
-
-# Extract major and minor version (e.g., "1.24")
-K8S_MAJOR_MINOR=$(echo $K8S_VERSION | cut -d'.' -f1,2)
-
-# Check if the Kubernetes version is 1.24 or higher
-if [[ "$(echo $K8S_MAJOR_MINOR | sed 's/[^0-9]*//g')" -ge 124 ]]; then
-  echo "Kubernetes version is 1.24 or higher, using dynamic token generation."
-
-  # Retrieve the token dynamically for service account
-  if [ -z "${PLUGIN_KUBERNETES_TOKEN}" ]; then
-    echo "Fetching token for service account ${PLUGIN_KUBERNETES_USER} in namespace ${PLUGIN_KUBERNETES_NAMESPACE}..."
-    PLUGIN_KUBERNETES_TOKEN=$(kubectl -n ${PLUGIN_KUBERNETES_NAMESPACE} create token ${PLUGIN_KUBERNETES_USER} --duration=24h)
-    if [ -z "${PLUGIN_KUBERNETES_TOKEN}" ]; then
-      echo "ERROR: Failed to fetch the token. Ensure the service account and permissions are correctly set up."
-      exit 1
-    fi
-  fi
-else
-  echo "Kubernetes version is older than 1.24, using provided certificate and token."
-
-  # Check if cert and token are provided
-  if [ -z "${PLUGIN_KUBERNETES_TOKEN}" ]; then
-    echo "ERROR: PLUGIN_KUBERNETES_TOKEN is required for Kubernetes versions < 1.24."
-    exit 1
-  fi
-
-  # Handle certificate authority (CA)
-  if [ ! -z "${PLUGIN_KUBERNETES_CERT}" ]; then
-    echo "${PLUGIN_KUBERNETES_CERT}" | base64 -d > ca.crt
-    kubectl config set-cluster default --server=${PLUGIN_KUBERNETES_SERVER} --certificate-authority=ca.crt
-  else
-    echo "WARNING: Using insecure connection to cluster"
-    kubectl config set-cluster default --server=${PLUGIN_KUBERNETES_SERVER} --insecure-skip-tls-verify=true
-  fi
-fi
-
-# Configure Kubernetes credentials
 kubectl config set-credentials ${PLUGIN_KUBERNETES_USER} --token=${PLUGIN_KUBERNETES_TOKEN}
 
-# Configure context and use it
+if [ ! -z ${PLUGIN_KUBERNETES_CERT} ]; then
+  echo ${PLUGIN_KUBERNETES_CERT} | base64 -d > ca.crt
+  kubectl config set-cluster default --server=${PLUGIN_KUBERNETES_SERVER} --certificate-authority=ca.crt
+else
+  echo "WARNING: Using insecure connection to cluster"
+  kubectl config set-cluster default --server=${PLUGIN_KUBERNETES_SERVER} --insecure-skip-tls-verify=true
+fi
+
 kubectl config set-context default --cluster=default --user=${PLUGIN_KUBERNETES_USER} --namespace=${PLUGIN_KUBERNETES_NAMESPACE}
 kubectl config use-context default
