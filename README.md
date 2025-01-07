@@ -4,15 +4,49 @@ This [Drone CI](https://drone.io/) plugin allows you to use `kubectl` and `helm`
 
 ## Usage
 
-### Kubernetes 1.24 or newer
+The following example shows how to configure a pipeline step to use the plugin via Docker Hub:
+
+```yaml
+kind: pipeline
+name: check version
+
+steps:
+  - name: versions
+    image: pgroenbaek/drone-kubectl-helm3
+    settings:
+      kubernetes_user: <SERVICE_ACCOUNT_NAME>
+      kubernetes_server: <SERVER_URL>
+      kubernetes_cert:
+        from_secret: k8s_cert
+      kubernetes_token:
+        from_secret: k8s_token
+    commands:
+      - kubectl version
+      - helm version
+```
+
+You need to define `k8s_cert` and `k8s_token` as pipeline secrets. You also need to specify the kubernetes service account name and server url.
+
+Read the next section if you don't know how to get these.
+
+## Getting the kubernetes cluster credentials
+There is a slight variation in how to create the credentials depending on the kubernetes version.
+
+Kubernetes versions 1.23 and older will automatically create a token for you when creating the service account, while you manually need to create one in kubernetes versions 1.24 and newer.
+
+### Kubernetes 1.24 and newer
 First create a service account in the kubernetes cluster. This service account allows the pipeline to perform work on the cluster.
 ```bash
 kubectl create serviceaccount <SERVICE_ACCOUNT_NAME>
 kubectl create clusterrolebinding <SERVICE_ACCOUNT_NAME> --clusterrole=cluster-admin --serviceaccount=default:<SERVICE_ACCOUNT_NAME>
+```
+
+Create the kubernetes auth token:
+```bash
 kubectl create token <SERVICE_ACCOUNT_NAME> -n default --duration=8760h
 ```
 
-*NOTE:* The token created with the above command will last for one year, change `8760h` if needed.
+**NOTE:** The token created with the above command will last for one year, change `8760h` if needed.
 
 You can find your server url by using this command:
 ```bash
@@ -24,80 +58,32 @@ You can find the certificate by using this command:
 kubectl get configmap -n kube-system kube-root-ca.crt -o jsonpath='{.data.ca\.crt}' | base64 -w 0
 ```
 
-The following example shows how to configure a pipeline step to use the plugin from Docker Hub for Kubernetes 1.24 or newer:
-
-```yaml
-kind: pipeline
-name: check version
-
-steps:
-  - name: versions
-    image: pgroenbaek/drone-kubectl-helm3
-    settings:
-      kubernetes_user: <SERVICE_ACCOUNT_NAME>
-      kubernetes_server: <SERVER_URL>
-      kubernetes_cert:
-        from_secret: k8s_cert
-      kubernetes_token:
-        from_secret: k8s_token
-    commands:
-      - kubectl version
-      - helm version
-```
-
-Define `k8s_cert` and `k8s_token` as pipeline secrets with the cert and token values you just created.
-
-### Kubernetes 1.23 or older
+### Kubernetes 1.23 and older
 First create a service account in the kubernetes cluster. This service account allows the pipeline to perform work on the cluster.
 ```bash
 kubectl create serviceaccount <SERVICE_ACCOUNT_NAME>
 kubectl create clusterrolebinding <SERVICE_ACCOUNT_NAME> --clusterrole=cluster-admin --serviceaccount=default:<SERVICE_ACCOUNT_NAME>
 ```
 
-After creating a service account, you can find your server url by using the command:
+You can find your server url by using this command:
 ```bash
 kubectl config view -o jsonpath='{range .clusters[*]}{.name}{"\t"}{.cluster.server}{"\n"}{end}'
 ```
 
 If the service account name is `deploy`, you would now have a secret named `deploy-token-xxxx` (xxxx is some random characters).
 
-You can get your token and certificate by using the following commands:
-
-k8s_cert:
-```bash
-kubectl get secret deploy-token-xxxx -o jsonpath='{.data.ca\.crt}' && echo
-```
-
-k8s_token:
+You can find the token by using this command:
 ```bash
 kubectl get secret deploy-token-xxxx -o jsonpath='{.data.token}' | base64 --decode && echo
 ```
 
-The following example shows how to configure a pipeline step to use the plugin from Docker Hub for Kubernetes 1.23 or older:
-
-```yaml
-kind: pipeline
-name: check version
-
-steps:
-  - name: versions
-    image: pgroenbaek/drone-kubectl-helm3
-    settings:
-      kubernetes_user: <SERVICE_ACCOUNT_NAME>
-      kubernetes_server: <SERVER_URL>
-      kubernetes_cert:
-        from_secret: k8s_cert
-      kubernetes_token:
-        from_secret: k8s_token
-    commands:
-      - kubectl version
-      - helm version
-
+You can find the certificate by using this command:
+```bash
+kubectl get secret deploy-token-xxxx -o jsonpath='{.data.ca\.crt}' && echo
 ```
 
-Define `k8s_cert` and `k8s_token` as pipeline secrets with the cert and token values you just created.
 
-### Using a private container registry
+## Using a private container registry
 
 If you would rather use the plugin from a private container registry, clone this repository, then build and push the created docker image to your private registry:
 
