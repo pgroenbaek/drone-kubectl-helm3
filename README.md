@@ -108,6 +108,10 @@ steps:
     settings:
       kubernetes_user: <SERVICE_ACCOUNT_NAME>
       kubernetes_server: <SERVER_URL>
+      kubernetes_cert:
+        from_secret: k8s_cert
+      kubernetes_token:
+        from_secret: k8s_token
     commands:
       - kubectl version
       - helm version
